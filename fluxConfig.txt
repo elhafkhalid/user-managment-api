@@ -1,0 +1,180 @@
+ETAPE1 =>  Tomcat reçoit la requête
+1. Tomcat écoute sur le port 8080
+2. Il reçoit : POST /api/users
+3. Il regarde ses mappings :
+   "Toutes les URLs /xxx → DispatcherServlet"
+4. ✅ MATCH : il envoie la requête au DispatcherServlet
+
+
+ETAPE2 => Le DispatcherServlet cherche le bon controller
+1. DispatcherServlet reçoit : POST /api/users
+2. Il demande au HandlerMapping :
+   "Quelle méthode peut traiter POST /api/users ?"
+3. HandlerMapping consulte les @RequestMapping :
+   - UserController a @RequestMapping("/api/users")
+   - createUser a @PostMapping
+   - ✅ MATCH trouvé
+4. Il retourne : "C'est UserController.createUser()"
+
+ 
+ETAPE3 => Conversion JSON → Java (Jackson)
+1. DispatcherServlet voit le paramètre : @RequestBody UserCreateRequest
+2. Il demande à Jackson : "Convertis ce JSON en UserCreateRequest"
+3. Jackson fait :
+   → new UserCreateRequest()    (constructeur vide)
+   → setName("Alice")
+   → setEmail("alice@mail.com")
+   → setPassword("secret123")
+   → setRole(Role.USER)
+4. L'objet UserCreateRequest est créé ✅
+
+
+ETAPE4 => Validation du DTO (@Valid)
+1. DispatcherServlet voit @Valid sur le paramètre
+2. Il demande au Validator de vérifier :
+
+   ┌─────────────────────────────────────┐
+   │  UserCreateRequest                   │
+   │                                      │
+   │  @NotBlank name="Alice"        ✅    │
+   │  @Email email="alice@mail.com" ✅    │
+   │  @Size password="secret123"    ✅    │
+   │  @NotNull role=USER            ✅    │
+   └─────────────────────────────────────┘
+
+3. Tout est valide → on continue
+
+
+ETAPE5 => Appel du Controller
+1. DispatcherServlet appelle : UserController.createUser(request)
+2. Le controller reçoit le DTO validé
+3. Le controller fait UNE SEULE CHOSE :
+   → Il délègue au service :
+   UserResponse response = userService.createUser(request);
+
+ETAPE6 => Le Service ouvre une transaction
+1. Spring voit @Transactional sur createUser()
+2. Il ouvre une transaction AVANT d'exécuter la méthode
+3. Tout ce qui se passera dans la méthode sera :
+   - soit COMMIT (si tout va bien)
+   - soit ROLLBACK (si erreur)
+
+
+ETAPE7 => Le Service exécute sa logique
+Étape 7A — Vérifier l'unicité de l'email
+1. existsByEmail("alice@mail.com")
+2. UserRepository → SELECT COUNT(*) FROM users WHERE email = ?
+3. H2 renvoie : 0
+4. → email libre ✅
+
+Étape 7B — Convertir le DTO en entité
+5. userMapper.toEntity(request)
+6. Crée un User (non persisté) :
+   - name = "Alice"
+   - email = "alice@mail.com"
+   - password = "secret123"  ← EN CLAIR
+   - role = USER
+   - active = true
+   - createdAt = maintenant
+   - updatedAt = maintenant
+
+Étape 7C — Hacher le mot de passe
+7. passwordEncoder.encode("secret123")
+8. → "$2a$10$Xyz..."  (BCrypt)
+
+Étape 7D — Sauvegarder en BDD
+9. userRepository.save(user)
+10. Hibernate génère :
+    INSERT INTO users (name, email, password, role, active, created_at, updated_at)
+    VALUES ('Alice', 'alice@mail.com', '$2a$10$...', 'USER', true, NOW(), NOW())
+11. H2 exécute l'INSERT
+12. H2 génère : id = 1
+13. L'objet User a maintenant id = 1
+
+Étape 7E — Convertir en DTO de sortie
+14. userMapper.toResponse(saved)
+15. → UserResponse (SANS password)
+
+Étape 7F — COMMIT
+16. Spring fait un COMMIT
+17. Données écrites définitivement ✅
+
+
+ETAPE8 => Retour au Controller
+1. Le service retourne : UserResponse
+2. Le controller construit la réponse :
+   return ResponseEntity.status(HttpStatus.CREATED).body(response);
+3. Code HTTP : 201 Created
+4. Corps : UserResponse
+
+
+ETAPE9 => Conversion Java → JSON (Jackson)
+1. Jackson reçoit le UserResponse
+2. Il appelle les getters :
+   → getId() = 1
+   → getName() = "Alice"
+   → getEmail() = "alice@mail.com"
+   → getRole() = USER
+   → isActive() = true
+   → getCreatedAt() = 2026-10-16T10:30:00
+   → getUpdatedAt() = 2026-10-16T10:30:00
+3. Il construit le JSON
+
+
+ETAPE10 => Tomcat renvoie la réponse à Alice
+HTTP/1.1 201 Created
+Content-Type: application/json
+Content-Length: 187
+
+{
+  "id": 1,
+  "name": "Alice",
+  "email": "alice@mail.com",
+  "role": "USER",
+  "active": true,
+  "createdAt": "2026-10-16T10:30:00",
+  "updatedAt": "2026-10-16T10:30:00"
+}
+
+
+
+
+
+RESUMER
+Alice envoie POST /api/users
+        │
+        ▼
+[6.1]  Tomcat reçoit → DispatcherServlet
+        │
+        ▼
+[6.2]  DispatcherServlet trouve UserController.createUser
+        │
+        ▼
+[6.3]  Jackson : JSON → UserCreateRequest
+        │
+        ▼
+[6.4]  @Valid : validation du DTO
+        │
+        ▼
+[6.5]  UserController → appelle UserService
+        │
+        ▼
+[6.6]  @Transactional : ouvre une transaction
+        │
+        ▼
+[6.7]  UserService : logique métier
+        │
+        ├─ existsByEmail → SELECT
+        ├─ mapper.toEntity → User
+        ├─ passwordEncoder.encode → hash BCrypt
+        ├─ save → INSERT
+        └─ mapper.toResponse → UserResponse
+        │
+        ▼
+[6.8]  Retour au Controller → ResponseEntity 201
+        │
+        ▼
+[6.9]  Jackson : UserResponse → JSON
+        │
+        ▼
+[6.10] Tomcat → Alice reçoit 201 + JSON ✅

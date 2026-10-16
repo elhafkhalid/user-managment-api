@@ -1,0 +1,286 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!--  1. IDENTITÉ DU PROJET                                  -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <groupId>com.example</groupId>
+    <artifactId>user-management-api</artifactId>
+    <version>1.0.0</version>
+    <packaging>war</packaging>
+
+    <name>User Management API</name>
+    <description>API REST de gestion des utilisateurs — Spring sans Spring Boot</description>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!--  2. PROPRIÉTÉS : VERSIONS CENTRALISÉES                  -->
+    <!--     Un seul endroit pour TOUTES les versions            -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <properties>
+        <!-- Java -->
+        <java.version>17</java.version>
+        <maven.compiler.source>${java.version}</maven.compiler.source>
+        <maven.compiler.target>${java.version}</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+        <!-- Spring Framework (Core + MVC + ORM + TX + Test) -->
+        <spring.version>7.0.9</spring.version>
+
+        <!-- Spring Data JPA -->
+        <spring-data-jpa.version>4.1.1</spring-data-jpa.version>
+
+        <!-- Hibernate (implémentation JPA) -->
+        <hibernate.version>7.0.4.Final</hibernate.version>
+
+        <!-- Bean Validation -->
+        <hibernate-validator.version>8.0.2.Final</hibernate-validator.version>
+        <jakarta.validation.version>3.1.0</jakarta.validation.version>
+        <jakarta.el.version>5.0.0-M1</jakarta.el.version>
+
+        <!-- Jackson 3 (JSON) -->
+        <jackson.version>3.2.3</jackson.version>
+
+        <!-- Pool de connexions -->
+        <hikari.version>5.1.0</hikari.version>
+
+        <!-- Base de données H2 -->
+        <h2.version>2.2.224</h2.version>
+
+        <!-- Spring Security Crypto (BCrypt uniquement) -->
+        <spring-security.version>7.1.1</spring-security.version>
+
+        <!-- Servlet API (fournie par Tomcat 10.1) -->
+        <jakarta.servlet.version>6.1.0</jakarta.servlet.version>
+
+        <!-- Tests -->
+        <junit.version>5.10.2</junit.version>
+        <mockito.version>5.11.0</mockito.version>
+
+        <!-- Plugins Maven -->
+        <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
+        <maven-war-plugin.version>3.4.0</maven-war-plugin.version>
+        <maven-surefire-plugin.version>3.2.5</maven-surefire-plugin.version>
+        <maven-enforcer-plugin.version>3.5.0</maven-enforcer-plugin.version>
+    </properties>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!--  3. DÉPENDANCES                                         -->
+    <!--     Groupées par fonctionnalité                         -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <dependencies>
+
+        <!-- ─────────────── SPRING CORE ─────────────── -->
+        <!-- Conteneur IoC, @Configuration, @Bean, @Autowired -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+            <version>${spring.version}</version>
+        </dependency>
+
+        <!-- Gestion des transactions (@Transactional) -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-tx</artifactId>
+            <version>${spring.version}</version>
+        </dependency>
+
+        <!-- ─────────────── SPRING MVC ─────────────── -->
+        <!-- API REST : @RestController, DispatcherServlet, Jackson integration -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-webmvc</artifactId>
+            <version>${spring.version}</version>
+        </dependency>
+
+        <!-- ─────────────── SPRING ORM (pont Spring ↔ JPA) ─────────────── -->
+        <!-- LocalContainerEntityManagerFactoryBean, JpaTransactionManager -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-orm</artifactId>
+            <version>${spring.version}</version>
+        </dependency>
+
+        <!-- ─────────────── SPRING DATA JPA ─────────────── -->
+        <!-- JpaRepository, méthodes dérivées, pagination -->
+        <dependency>
+            <groupId>org.springframework.data</groupId>
+            <artifactId>spring-data-jpa</artifactId>
+            <version>${spring-data-jpa.version}</version>
+        </dependency>
+
+        <!-- ─────────────── HIBERNATE (implémentation JPA) ─────────────── -->
+        <dependency>
+            <groupId>org.hibernate.orm</groupId>
+            <artifactId>hibernate-core</artifactId>
+            <version>${hibernate.version}</version>
+        </dependency>
+
+        <!-- ─────────────── VALIDATION ─────────────── -->
+        <!-- API Bean Validation (@NotBlank, @Email, @Size) -->
+        <dependency>
+            <groupId>jakarta.validation</groupId>
+            <artifactId>jakarta.validation-api</artifactId>
+            <version>${jakarta.validation.version}</version>
+        </dependency>
+
+        <!-- Implémentation de Bean Validation -->
+        <dependency>
+            <groupId>org.hibernate.validator</groupId>
+            <artifactId>hibernate-validator</artifactId>
+            <version>${hibernate-validator.version}</version>
+        </dependency>
+
+        <!-- Moteur EL (obligatoire pour les messages de validation) -->
+        <dependency>
+            <groupId>org.glassfish</groupId>
+            <artifactId>jakarta.el</artifactId>
+            <version>${jakarta.el.version}</version>
+        </dependency>
+
+        <!-- ─────────────── JSON (Jackson 3) ─────────────── -->
+        <!-- Sérialisation / désérialisation JSON + support LocalDateTime -->
+        <dependency>
+            <groupId>tools.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+
+        <!-- ─────────────── POOL DE CONNEXIONS ─────────────── -->
+        <dependency>
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP</artifactId>
+            <version>${hikari.version}</version>
+        </dependency>
+
+        <!-- ─────────────── BASE DE DONNÉES H2 ─────────────── -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <version>${h2.version}</version>
+        </dependency>
+
+        <!-- ─────────────── BCRYPT (hachage mot de passe) ─────────────── -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-crypto</artifactId>
+            <version>${spring-security.version}</version>
+        </dependency>
+
+        <!-- ─────────────── SERVLET API ─────────────── -->
+        <!-- Fournie par Tomcat à l'exécution (scope=provided) -->
+        <dependency>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <version>${jakarta.servlet.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- ─────────────── TESTS ─────────────── -->
+        <!-- Support Spring pour les tests (MockMvc) -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-test</artifactId>
+            <version>${spring.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- JUnit 5 -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Mockito -->
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>${mockito.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Mockito + JUnit 5 (extension) -->
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
+            <version>${mockito.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!--  4. BUILD : plugins Maven                               -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <build>
+
+        <!-- Nom du fichier final : user-management-api.war -->
+        <finalName>user-management-api</finalName>
+
+        <plugins>
+
+            <!-- ─── Enforcer : vérifie la version Java ─── -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>${maven-enforcer-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>enforce-java</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireJavaVersion>
+                                    <version>[17,)</version>
+                                </requireJavaVersion>
+                                <requireMavenVersion>
+                                    <version>[3.8,)</version>
+                                </requireMavenVersion>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- ─── Compilateur Java 17 ─── -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${maven-compiler-plugin.version}</version>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                    <encoding>UTF-8</encoding>
+                </configuration>
+            </plugin>
+
+            <!-- ─── Packaging WAR sans web.xml ─── -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <version>${maven-war-plugin.version}</version>
+                <configuration>
+                    <failOnMissingWebXml>false</failOnMissingWebXml>
+                </configuration>
+            </plugin>
+
+            <!-- ─── Exécution des tests JUnit 5 ─── -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${maven-surefire-plugin.version}</version>
+            </plugin>
+
+        </plugins>
+    </build>
+
+</project>
